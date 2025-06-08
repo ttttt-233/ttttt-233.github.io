@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>纪念日计时器</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background: #f7f9fa;
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        .card {
+            background: #fff;
+            border-radius: 20px;
+            box-shadow: 0 4px 24px rgba(79,140,255,0.10);
+            padding: 0;
+            min-width: 350px;
+            max-width: 95vw;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .card-header {
+            background: #4f8cff;
+            color: #fff;
+            width: 100%;
+            border-radius: 20px 20px 0 0;
+            padding: 36px 0 24px 0;
+            text-align: center;
+            font-size: 2.1em;
+            font-weight: bold;
+            letter-spacing: 2px;
+        }
+        .timer-wrapper {
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 48px 0 56px 0;
+        }
+        #timer {
+            font-size: 3.5em;
+            color: #222;
+            font-weight: bold;
+            letter-spacing: 3px;
+            text-align: center;
+            line-height: 1.2;
+            cursor: pointer;
+            user-select: none;
+            transition: color 0.2s;
+        }
+        #timer:active {
+            color: #4f8cff;
+        }
+        @media (max-width: 600px) {
+            .card { min-width: unset; }
+            .card-header { font-size: 1.2em; padding: 20px 0 12px 0; }
+            .timer-wrapper { padding: 24px 0 28px 0; }
+            #timer { font-size: 1.5em; }
+        }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <div class="card-header" id="card-header">
+            距离2024年6月8日17:40已经过去
+        </div>
+        <div class="timer-wrapper">
+            <div id="timer" title="点击切换倒计时/计时">计算中...</div>
+        </div>
+    </div>
+    <script>
+        const startDate = new Date('2024-06-08T17:40:00');
+        let showCountdown = false;
+        let isMaximized = false;
+
+        function getAnniversary(year) {
+            let anniv = new Date(startDate);
+            anniv.setFullYear(year);
+            return anniv;
+        }
+
+        // 格式化数字为两位宽
+        function pad2(n) {
+            return n.toString().padStart(2, '0');
+        }
+
+        // 格式化时间部分，单位与数字间距相同
+        function formatTimeParts(parts) {
+            let started = false;
+            let result = [];
+            for (let i = 0; i < parts.length; i++) {
+                if (!started && parts[i].value === 0) continue;
+                started = true;
+                // 单位与数字间加空格
+                result.push(`<span class="num">${pad2(parts[i].value)}</span><span class="unit"> ${parts[i].label} </span>`);
+            }
+            if (result.length === 0 && parts.length > 0) {
+                let last = parts[parts.length - 1];
+                result.push(`<span class="num">${pad2(last.value)}</span><span class="unit"> ${last.label} </span>`);
+            }
+            return result.join('');
+        }
+
+        function updateTimer() {
+            const now = new Date();
+            const timer = document.getElementById('timer');
+            const header = document.getElementById('card-header');
+
+            if (!showCountdown) {
+                let diff = now - startDate;
+                if (diff < 0) {
+                    timer.innerHTML = "纪念日还未到来";
+                    header.textContent = "距离2024年6月8日17:40已经过去";
+                    return;
+                }
+
+                let years = now.getFullYear() - startDate.getFullYear();
+                let tempDate = new Date(startDate);
+                tempDate.setFullYear(startDate.getFullYear() + years);
+                if (now < tempDate) {
+                    years--;
+                    tempDate.setFullYear(startDate.getFullYear() + years);
+                }
+
+                let days = Math.floor((now - tempDate) / (1000 * 60 * 60 * 24));
+                tempDate.setDate(tempDate.getDate() + days);
+
+                let hours = now.getHours() - tempDate.getHours();
+                let minutes = now.getMinutes() - tempDate.getMinutes();
+                let seconds = now.getSeconds() - tempDate.getSeconds();
+
+                if (seconds < 0) {
+                    seconds += 60;
+                    minutes--;
+                }
+                if (minutes < 0) {
+                    minutes += 60;
+                    hours--;
+                }
+                if (hours < 0) {
+                    hours += 24;
+                    days--;
+                }
+
+                timer.innerHTML = formatTimeParts([
+                    { value: years, label: '年' },
+                    { value: days, label: '天' },
+                    { value: hours, label: '时' },
+                    { value: minutes, label: '分' },
+                    { value: seconds, label: '秒' }
+                ]);
+                header.textContent = "距离2024年6月8日17:40已经过去";
+            } else {
+                let years = now.getFullYear() - startDate.getFullYear();
+                let nextAnnivYear = startDate.getFullYear() + years + (now >= getAnniversary(startDate.getFullYear() + years) ? 1 : 0);
+                let nextAnniv = getAnniversary(nextAnnivYear);
+                let diff = nextAnniv - now;
+
+                if (diff <= 0) {
+                    timer.innerHTML = "周年纪念日到啦！";
+                    header.textContent = `距离${nextAnnivYear - startDate.getFullYear()}周年`;
+                    return;
+                }
+
+                let remainYears = nextAnniv.getFullYear() - now.getFullYear();
+                let tempDate = new Date(now);
+                tempDate.setFullYear(now.getFullYear() + remainYears);
+                if (tempDate > nextAnniv) {
+                    remainYears--;
+                    tempDate.setFullYear(now.getFullYear() + remainYears);
+                }
+
+                let days = Math.floor((nextAnniv - tempDate) / (1000 * 60 * 60 * 24));
+                tempDate.setDate(tempDate.getDate() + days);
+
+                let hours = nextAnniv.getHours() - tempDate.getHours();
+                let minutes = nextAnniv.getMinutes() - tempDate.getMinutes();
+                let seconds = nextAnniv.getSeconds() - tempDate.getSeconds();
+
+                if (seconds < 0) {
+                    seconds += 60;
+                    minutes--;
+                }
+                if (minutes < 0) {
+                    minutes += 60;
+                    hours--;
+                }
+                if (hours < 0) {
+                    hours += 24;
+                    days--;
+                }
+
+                timer.innerHTML = formatTimeParts([
+                    { value: remainYears, label: '年' },
+                    { value: days, label: '天' },
+                    { value: hours, label: '时' },
+                    { value: minutes, label: '分' },
+                    { value: seconds, label: '秒' }
+                ]);
+                header.textContent = `距离${nextAnnivYear - startDate.getFullYear()}周年`;
+            }
+        }
+
+        document.getElementById('timer').addEventListener('click', function() {
+            showCountdown = !showCountdown;
+            updateTimer();
+        });
+
+        // 最大化功能
+        document.getElementById('card-header').addEventListener('click', function() {
+            const card = document.querySelector('.card');
+            const timer = document.getElementById('timer');
+            if (!isMaximized) {
+                card.classList.add('maximized');
+                timer.classList.add('maximized-timer');
+                isMaximized = true;
+            } else {
+                card.classList.remove('maximized');
+                timer.classList.remove('maximized-timer');
+                isMaximized = false;
+            }
+        });
+
+        setInterval(updateTimer, 1000);
+        updateTimer();
+    </script>
+    <style>
+    .card.maximized {
+        position: fixed !important;
+        top: 0; left: 0; right: 0; bottom: 0;
+        width: 100vw !important;
+        height: 100vh !important;
+        min-width: unset !important;
+        max-width: unset !important;
+        border-radius: 0 !important;
+        z-index: 9999;
+        box-shadow: none !important;
+        display: flex !important;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        background: #fff;
+    }
+    .card.maximized .timer-wrapper {
+        flex: 1 1 auto;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+        padding: 0;
+    }
+    .card.maximized .card-header {
+        border-radius: 0 0 0 0 !important;
+        font-size: 2.5em;
+        padding: 48px 0 32px 0;
+    }
+    /* 新增：全屏时增大计时字号 */
+    .maximized-timer {
+        font-size: 7em !important;
+    }
+    /* 两位数字宽度和单位间距 */
+    #timer .num {
+        display: inline-block;
+        min-width: 2ch;
+        text-align: right;
+    }
+    #timer .unit {
+        display: inline-block;
+        min-width: 2ch;
+        text-align: center;
+        margin: 0 0.2em;
+        color: #888;
+        font-size: 0.7em;
+        vertical-align: middle;
+        letter-spacing: 0;
+    }
+    @media (max-width: 600px) {
+        .card.maximized .card-header { font-size: 1.5em; padding: 24px 0 16px 0; }
+        .card.maximized #timer, .maximized-timer { font-size: 3em !important; }
+    }
+    </style>
+</html>
